@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.mixins import DestroyModelMixin, RetrieveModelMixin, ListModelMixin, CreateModelMixin
 
 from boards.models import Board, User
@@ -13,10 +14,9 @@ class BoardViewSet(CreateModelMixin,
     serializer_class = BoardSerializer
 
 
-class UserViewSet(CreateModelMixin,
-                  ListModelMixin,
+class UserViewSet(ObtainAuthToken,
+                  CreateModelMixin,
                   RetrieveModelMixin,
-                  DestroyModelMixin,
                   viewsets.GenericViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
