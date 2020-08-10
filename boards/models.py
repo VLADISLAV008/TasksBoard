@@ -14,7 +14,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     password = models.CharField(max_length=255)
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ('password', )
+    REQUIRED_FIELDS = ('password',)
 
     objects = UserManager()
 
@@ -24,11 +24,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Board(models.Model):
-    topic = models.CharField(max_length=100)
-    description = models.TextField()
+    title = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
     owner = models.ForeignKey(User, related_name='board_set', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
-    users = models.ManyToManyField(User, blank=True, related_name='available_board_set')
+    # users = models.ManyToManyField(User, blank=True, related_name='available_board_set')
 
     class Meta:
         ordering = ['created']
