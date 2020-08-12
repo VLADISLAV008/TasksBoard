@@ -1,12 +1,17 @@
 from rest_framework import serializers
-from boards.models import Board, User
+from boards.models import Board, User, Section
 
 
 class BoardSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Board
         fields = ['id', 'title', 'description', 'owner']
+
+
+class SectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Section
+        fields = ['id', 'topic', 'description', 'board']
 
 
 class UserSerializer(serializers.ModelSerializer):

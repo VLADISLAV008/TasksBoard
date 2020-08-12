@@ -37,7 +37,7 @@ class Board(models.Model):
 class Section(models.Model):
     board = models.ForeignKey(Board, related_name='section_set', on_delete=models.CASCADE)
     topic = models.CharField(max_length=100)
-    description = models.TextField()
+    description = models.TextField(blank=True)
 
 
 class Card(models.Model):

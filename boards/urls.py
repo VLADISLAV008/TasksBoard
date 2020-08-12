@@ -5,6 +5,7 @@ from boards import views
 # Create a router and register our viewsets with it.
 router = DefaultRouter()
 router.register(r'boards', views.BoardViewSet, basename='Boards')
+router.register(r'sections', views.SectionViewSet, basename='Sections')
 router.register(r'user', views.UserViewSet)
 router.register(r'user', views.UserDetailViewSet)
 
