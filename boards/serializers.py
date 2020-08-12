@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from boards.models import Board, User, Section
+from boards.models import Board, User, Section, Card
 
 
 class BoardSerializer(serializers.ModelSerializer):
@@ -12,6 +12,12 @@ class SectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Section
         fields = ['id', 'topic', 'description', 'board']
+
+
+class CardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Card
+        fields = ['id', 'name', 'description', 'section', 'performer']
 
 
 class UserSerializer(serializers.ModelSerializer):

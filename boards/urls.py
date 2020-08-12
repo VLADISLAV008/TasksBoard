@@ -4,10 +4,11 @@ from boards import views
 
 # Create a router and register our viewsets with it.
 router = DefaultRouter()
-router.register(r'boards', views.BoardViewSet, basename='Boards')
-router.register(r'sections', views.SectionViewSet, basename='Sections')
+router.register(r'boards', views.BoardViewSet, basename='Board')
+router.register(r'sections', views.SectionViewSet, basename='Section')
+router.register(r'cards', views.CardViewSet, basename='Card')
 router.register(r'user', views.UserViewSet)
-router.register(r'user', views.UserDetailViewSet)
+router.register(r'user', views.UserDetailViewSet, basename="User")
 
 # The API URLs are now determined automatically by the router.
 urlpatterns = [
