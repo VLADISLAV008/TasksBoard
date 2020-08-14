@@ -1,17 +1,18 @@
 from rest_framework import permissions
 
 
-class IsBoardOwnerOrBoardUserReadOnly(permissions.BasePermission):
-    """
-    Custom permission to only allow owners of an object to edit it and board's users to retrieve one.
-    """
+class IsBoardOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.owner == request.user
 
+
+class IsBoardGuestReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         user = request.user
         if request.method in permissions.SAFE_METHODS:
             return obj.owner == user or user in obj.users.all()
 
-        return obj.owner == user
+        return False
 
 
 class IsSectionUser(permissions.BasePermission):

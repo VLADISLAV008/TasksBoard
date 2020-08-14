@@ -26,9 +26,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 class Board(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
-    owner = models.ForeignKey(User, related_name='board_set', on_delete=models.CASCADE)
+    owner = models.ForeignKey(User, related_name='owner_board_set', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
-    users = models.ManyToManyField(User, blank=True, related_name='available_board_set')
+    users = models.ManyToManyField(User, blank=True, related_name='guest_board_set')
 
     class Meta:
         ordering = ['created']

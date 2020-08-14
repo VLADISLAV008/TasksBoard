@@ -1,4 +1,5 @@
-from rest_framework import viewsets, permissions
+from django.db.models import Q
+from rest_framework import viewsets, permissions, status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.mixins import RetrieveModelMixin, CreateModelMixin
@@ -6,76 +7,62 @@ from rest_framework.response import Response
 
 from boards.models import Board, User, Section, Card
 from boards.serializers import BoardSerializer, UserSerializer, SectionSerializer, CardSerializer
-from boards.permissions import IsBoardOwnerOrBoardUserReadOnly, IsSectionUser, IsCardUser
+from boards.permissions import IsSectionUser, IsCardUser, IsBoardOwner, IsBoardGuestReadOnly
 
 
-class UserViewSet(CreateModelMixin,
+class UserViewSet(CreateModelMixin, RetrieveModelMixin,
                   viewsets.GenericViewSet):
-    queryset = User.objects.all()
     serializer_class = UserSerializer
-
-
-class UserDetailViewSet(RetrieveModelMixin,
-                        viewsets.GenericViewSet):
-    serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
+        if user.is_anonymous:
+            return User.objects.none()
         return User.objects.filter(pk=user.pk)
 
 
 class BoardViewSet(viewsets.ModelViewSet):
-    queryset = Board.objects.all()
     serializer_class = BoardSerializer
     permission_classes = [permissions.IsAuthenticated,
-                          IsBoardOwnerOrBoardUserReadOnly]
+                          IsBoardOwner | IsBoardGuestReadOnly]
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+    def get_queryset(self):
         user = self.request.user
-        queryset = queryset.filter(owner=user)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        queryset = user.owner_board_set.all() | user.guest_board_set.all()
+        return queryset
 
 
 class SectionViewSet(viewsets.ModelViewSet):
-    queryset = Section.objects.all()
     serializer_class = SectionSerializer
+    filterset_fields = ['board']
     permission_classes = [permissions.IsAuthenticated,
                           IsSectionUser]
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.queryset
-        board_id = request.query_params.get('boardId', None)
-
-        if board_id is not None:
-            queryset = queryset.filter(board__id=board_id)
-        else:
-            queryset = queryset.none()
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Section.objects.all()
+        queryset = queryset.filter(Q(board__owner=user) | Q(board__users__pk=user.pk))
+        return queryset.distinct()
 
 
 class CardViewSet(viewsets.ModelViewSet):
-    queryset = Card.objects.all()
     serializer_class = CardSerializer
+    filterset_fields = ['section']
     permission_classes = [permissions.IsAuthenticated,
                           IsCardUser]
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.queryset
-        section_id = request.query_params.get('sectionId', None)
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Card.objects.all()
+        queryset = queryset.filter(Q(section__board__owner=user) | Q(section__board__users__pk=user.pk))
+        return queryset.distinct()
 
-        if section_id is not None:
-            queryset = queryset.filter(section__id=section_id)
-        else:
-            queryset = queryset.none()
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+    def update(self, request, *args, **kwargs):
+        card = self.get_object()
+        new_section = Section.objects.all().filter(pk=request.data['section'])[0]
+        if card.section.board.pk != new_section.board.pk:
+            return Response({'detail': 'permission denied'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
 
 
 class CustomAuthToken(ObtainAuthToken):
@@ -88,5 +75,5 @@ class CustomAuthToken(ObtainAuthToken):
         token, created = Token.objects.get_or_create(user=user)
         return Response({
             'token': token.key,
-            'userId': user.pk,
+            'user_id': user.pk,
         })

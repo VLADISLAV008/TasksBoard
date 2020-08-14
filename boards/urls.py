@@ -7,8 +7,7 @@ router = DefaultRouter()
 router.register(r'boards', views.BoardViewSet, basename='Board')
 router.register(r'sections', views.SectionViewSet, basename='Section')
 router.register(r'cards', views.CardViewSet, basename='Card')
-router.register(r'user', views.UserViewSet)
-router.register(r'user', views.UserDetailViewSet, basename="User")
+router.register(r'user', views.UserViewSet, basename='User')
 
 # The API URLs are now determined automatically by the router.
 urlpatterns = [
