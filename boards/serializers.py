@@ -3,9 +3,11 @@ from boards.models import Board, User, Section, Card
 
 
 class BoardSerializer(serializers.ModelSerializer):
+    token = serializers.CharField(read_only=True, )
+
     class Meta:
         model = Board
-        fields = ['id', 'title', 'description', 'owner']
+        fields = ['id', 'title', 'description', 'owner', 'users', 'token']
 
 
 class SectionSerializer(serializers.ModelSerializer):
