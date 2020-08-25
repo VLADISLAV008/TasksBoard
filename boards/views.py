@@ -6,8 +6,9 @@ from rest_framework.decorators import action
 from rest_framework.mixins import RetrieveModelMixin, CreateModelMixin
 from rest_framework.response import Response
 
-from boards.models import User, Section, Card, Board
-from boards.serializers import BoardSerializer, UserSerializer, SectionSerializer, CardSerializer
+from boards.models import User, Section, Card
+from boards.serializers import BoardSerializer, UserSerializer, SectionSerializer, CardSerializer, \
+    InviteActivateSerializer
 from boards.permissions import IsSectionUser, IsCardUser, IsBoardOwner, IsBoardGuestReadOnly
 
 
@@ -37,26 +38,24 @@ class BoardViewSet(viewsets.ModelViewSet):
         return queryset.distinct()
 
     def perform_create(self, serializer):
-        token = Board.generate_token(12)
-        serializer.save(token=token)
+        owner = self.request.user
+        serializer.save(owner=owner)
 
     @action(detail=True)
     def users(self, request, pk=None):
-        queryset = User.objects.all()
         board = self.get_object()
-        if board is not None:
-            queryset = board.users
-        else:
-            queryset = queryset.none()
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(board.users, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['post'])
     def invite_link(self, request):
         user = request.user
-        board = Board.objects.all().filter(token=request.data['token'])[0]
 
-        if (board is not None) and (user != board.owner) and (user not in board.users.all()):
+        serializer = InviteActivateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        board = serializer.validated_data['token']
+
+        if user != board.owner and user not in board.users.all():
             board.users.add(user)
             board.save()
         serializer = self.get_serializer(board, many=False)

@@ -1,10 +1,8 @@
-import random
-import string
-
 from django.db import models
 
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
+from django.utils.crypto import get_random_string
 from rest_framework.authtoken.models import Token
 
 from boards.managers.UserManager import UserManager
@@ -31,17 +29,11 @@ class Board(models.Model):
     description = models.TextField(blank=True)
     owner = models.ForeignKey(User, related_name='owner_board_set', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
-    token = models.CharField(max_length=30, unique=True)
+    token = models.CharField(max_length=30, unique=True, default=get_random_string)
     users = models.ManyToManyField(User, blank=True, related_name='guest_board_set')
 
     class Meta:
         ordering = ['created']
-
-    @staticmethod
-    def generate_token(length):
-        letters = string.ascii_letters
-        token = ''.join(random.choice(letters) for i in range(length))
-        return token
 
 
 class Section(models.Model):

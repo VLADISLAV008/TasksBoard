@@ -3,11 +3,14 @@ from boards.models import Board, User, Section, Card
 
 
 class BoardSerializer(serializers.ModelSerializer):
-    token = serializers.CharField(read_only=True, )
-
     class Meta:
         model = Board
         fields = ['id', 'title', 'description', 'owner', 'users', 'token']
+        read_only_fields = ('owner', 'token')
+
+
+class InviteActivateSerializer(serializers.Serializer):
+    token = serializers.SlugRelatedField(slug_field='token', queryset=Board.objects.all())
 
 
 class SectionSerializer(serializers.ModelSerializer):
