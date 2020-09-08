@@ -61,7 +61,8 @@ MIDDLEWARE = [
 
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:8080",
-    "http://localhost:4200"
+    "http://localhost:4200",
+    "http://127.0.0.1"
 ]
 
 ROOT_URLCONF = 'tasks_board.urls'
@@ -127,5 +128,5 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
-
+STATIC_ROOT = os.path.join(BASE_DIR, "static/admin/css/autocomplete.css")
 STATIC_URL = '/static/'
