@@ -62,7 +62,7 @@ MIDDLEWARE = [
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:8080",
     "http://localhost:4200",
-    "http://127.0.0.1"
+    "http://127.0.0.1",
 ]
 
 ROOT_URLCONF = 'tasks_board.urls'
