@@ -2,7 +2,7 @@
 # 1. docker build --tag boards:1.0 .
 # 2. docker run --name test -p 80:80 boards:1.0
 
-FROM tiangolo/uwsgi-nginx:python3.8
+FROM tiangolo/uwsgi-nginx-flask:python3.8
 
 WORKDIR /app
 COPY requirements.txt /app/
@@ -11,4 +11,5 @@ RUN python -m pip install uwsgi
 COPY . /app/
 
 ENV UWSGI_INI /app/tasks_board/uwsgi.ini
-COPY ./tasks_board/nginx.conf /etc/nginx/nginx.conf
+ENV STATIC_PATH /app/static
+#COPY ./tasks_board/nginx.conf /etc/nginx/nginx.conf
