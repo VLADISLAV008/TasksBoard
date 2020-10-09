@@ -10,6 +10,8 @@ RUN pip install -r requirements.txt
 RUN python -m pip install uwsgi
 COPY . /app/
 
+RUN apt-get update && apt-get -y install gcc postgresql \
+  && apt-get clean
+
 ENV UWSGI_INI /app/tasks_board/uwsgi.ini
 ENV STATIC_PATH /app/static
-#COPY ./tasks_board/nginx.conf /etc/nginx/nginx.conf
