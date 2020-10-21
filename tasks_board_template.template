@@ -1,0 +1,1313 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Metadata": {
+    "AWS::CloudFormation::Interface": {
+      "ParameterGroups": [
+        {
+          "Label": {
+            "default": "VPC Configuration"
+          },
+          "Parameters": [
+            "VpcCIDR",
+            "AvZone1",
+            "AvZone2"
+          ]
+        },
+        {
+          "Label": {
+            "default": "Instance Configuration"
+          },
+          "Parameters": [
+            "InstancesKeyPair"
+          ]
+        },
+        {
+          "Label": {
+            "default": "NAT Instance Configuration"
+          },
+          "Parameters": [
+            "NatInstanceType"
+          ]
+        },
+        {
+          "Label": {
+            "default": "Bastion Instance Configuration"
+          },
+          "Parameters": [
+            "BastionInstanceType"
+          ]
+        },
+        {
+          "Label": {
+            "default": "Cluster Configuration"
+          },
+          "Parameters": [
+            "DesiredCapacity",
+            "MaxSize",
+            "InstanceType"
+          ]
+        },
+        {
+          "Label": {
+            "default": "RDS Configuration"
+          },
+          "Parameters": [
+            "DBInstanceID",
+            "DBName",
+            "DBInstanceClass",
+            "DBAllocatedStorage",
+            "DBUsername",
+            "DBPassword"
+          ]
+        }
+      ]
+    }
+  },
+  "Parameters": {
+    "VpcCIDR": {
+      "Type": "String",
+      "Description": "IP Address range for the VPC",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "Valid IP CIDR range as x.x.x.x/x.",
+      "Default": "10.0.0.0/16"
+    },
+    "AvZone1": {
+      "Type": "String",
+      "Description": "First AZ to use for subnets, etc.",
+      "ConstraintDescription": "Must be a valid AZ - # aws ec2 describe-availability-zones",
+      "Default": "us-east-2a"
+    },
+    "AvZone2": {
+      "Type": "String",
+      "Description": "Second AZ to use for subnets, etc.",
+      "ConstraintDescription": "Must be a valid AZ - # aws ec2 describe-availability-zones",
+      "Default": "us-east-2b"
+    },
+    "InstancesKeyPair": {
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "Description": "Existing EC2 key pair for NAT instance"
+    },
+    "NatInstanceType": {
+      "Type": "String",
+      "Description": "EC2 instance type for NAT",
+      "AllowedValues": [
+        "t2.micro",
+        "m4.large",
+        "m4.xlarge"
+      ],
+      "Default": "t2.micro"
+    },
+    "BastionInstanceType": {
+      "Type": "String",
+      "Description": "EC2 instance type for Bastion",
+      "AllowedValues": [
+        "t2.micro",
+        "m4.large",
+        "m4.xlarge"
+      ],
+      "Default": "t2.micro"
+    },
+    "DesiredCapacity": {
+      "Type": "Number",
+      "Default": "2",
+      "Description": "Number of instances to launch in your ECS cluster."
+    },
+    "MaxSize": {
+      "Type": "Number",
+      "Default": "4",
+      "Description": "Maximum number of instances that can be launched in your ECS cluster."
+    },
+    "InstanceType": {
+      "Description": "EC2 instance type",
+      "Type": "String",
+      "Default": "t2.micro",
+      "AllowedValues": [
+        "t2.micro",
+        "t2.small",
+        "t2.medium",
+        "t2.large",
+        "m3.medium",
+        "m3.large",
+        "m3.xlarge",
+        "m3.2xlarge",
+        "m4.large",
+        "m4.xlarge",
+        "m4.2xlarge",
+        "m4.4xlarge",
+        "m4.10xlarge",
+        "c4.large",
+        "c4.xlarge",
+        "c4.2xlarge",
+        "c4.4xlarge",
+        "c4.8xlarge",
+        "c3.large",
+        "c3.xlarge",
+        "c3.2xlarge",
+        "c3.4xlarge",
+        "c3.8xlarge",
+        "r3.large",
+        "r3.xlarge",
+        "r3.2xlarge",
+        "r3.4xlarge",
+        "r3.8xlarge",
+        "i2.xlarge",
+        "i2.2xlarge",
+        "i2.4xlarge",
+        "i2.8xlarge"
+      ],
+      "ConstraintDescription": "Please choose a valid instance type."
+    },
+    "DBInstanceID": {
+      "Default": "db-instance",
+      "Description": "My database instance",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "63",
+      "AllowedPattern": "[a-zA-Z][a-zA-Z0-9-]*",
+      "ConstraintDescription": "Must begin with a letter and must not end with a hyphen or contain two consecutive hyphens."
+    },
+    "DBName": {
+      "Default": "dbTasksBoard",
+      "Description": "My database",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "64",
+      "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription": "Must begin with a letter and contain only alphanumeric characters."
+    },
+    "DBInstanceClass": {
+      "Default": "db.t2.micro",
+      "Description": "DB instance class",
+      "Type": "String",
+      "ConstraintDescription": "Must select a valid DB instance type."
+    },
+    "DBAllocatedStorage": {
+      "Default": "20",
+      "Description": "The size of the database (GiB)",
+      "Type": "Number",
+      "MinValue": "20",
+      "MaxValue": "1024",
+      "ConstraintDescription": "must be between 20 and 65536 GiB."
+    },
+    "DBUsername": {
+      "Default": "postgres",
+      "NoEcho": "true",
+      "Description": "Username for MySQL database access",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "16",
+      "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+    },
+    "DBPassword": {
+      "Default": "password",
+      "NoEcho": "true",
+      "Description": "Password MySQL database access",
+      "Type": "String",
+      "MinLength": "8",
+      "MaxLength": "41",
+      "AllowedPattern": "[a-zA-Z0-9]*",
+      "ConstraintDescription": "must contain only alphanumeric characters."
+    }
+  },
+  "Mappings": {
+    "NATRegionAMI": {
+      "us-east-1": {
+        "AMI": "ami-00a9d4a05375b2763"
+      },
+      "us-east-2": {
+        "AMI": "ami-00d1f8201864cc10c"
+      },
+      "us-west-1": {
+        "AMI": "ami-004b0f60"
+      },
+      "us-west-2": {
+        "AMI": "ami-a275b1c2"
+      }
+    },
+    "BastionRegionAMI": {
+      "us-east-1": {
+        "AMI": "ami-0947d2ba12ee1ff75"
+      },
+      "us-east-2": {
+        "AMI": "ami-03657b56516ab7912"
+      },
+      "us-west-1": {
+        "AMI": "ami-0e4035ae3f70c400f"
+      },
+      "us-west-2": {
+        "AMI": "ami-0528a5175983e7f28"
+      }
+    },
+    "ClusterInstanceRegionAMI": {
+      "us-east-1": {
+        "AMI": "ami-eca289fb"
+      },
+      "us-east-2": {
+        "AMI": "ami-0151b45908571e14c"
+      },
+      "us-west-1": {
+        "AMI": "ami-9fadf8ff"
+      },
+      "us-west-2": {
+        "AMI": "ami-7abc111a"
+      },
+      "eu-west-1": {
+        "AMI": "ami-a1491ad2"
+      },
+      "eu-central-1": {
+        "AMI": "ami-54f5303b"
+      },
+      "ap-northeast-1": {
+        "AMI": "ami-9cd57ffd"
+      },
+      "ap-southeast-1": {
+        "AMI": "ami-a900a3ca"
+      },
+      "ap-southeast-2": {
+        "AMI": "ami-5781be34"
+      }
+    }
+  },
+  "Resources": {
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": {
+          "Ref": "VpcCIDR"
+        },
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "InstanceTenancy": "default",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "tasks-board-vpc"
+          }
+        ]
+      }
+    },
+    "PublicSubnetAZ1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": {
+          "Ref": "AvZone1"
+        },
+        "CidrBlock": "10.0.0.32/28",
+        "MapPublicIpOnLaunch": "true",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "public-sub-az1"
+          }
+        ]
+      }
+    },
+    "PublicSubnetAZ2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": {
+          "Ref": "AvZone2"
+        },
+        "CidrBlock": "10.0.0.48/28",
+        "MapPublicIpOnLaunch": "true",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "public-sub-az2"
+          }
+        ]
+      }
+    },
+    "PrivateSubnetAZ1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": {
+          "Ref": "AvZone1"
+        },
+        "CidrBlock": "10.0.0.0/28",
+        "MapPublicIpOnLaunch": "false",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "private-sub-az1"
+          }
+        ]
+      }
+    },
+    "PrivateSubnetAZ2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": {
+          "Ref": "AvZone2"
+        },
+        "CidrBlock": "10.0.0.16/28",
+        "MapPublicIpOnLaunch": "false",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "private-sub-az2"
+          }
+        ]
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "internet-gateway"
+          }
+        ]
+      }
+    },
+    "GatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "InternetGatewayId": {
+          "Ref": "InternetGateway"
+        },
+        "VpcId": {
+          "Ref": "VPC"
+        }
+      }
+    },
+    "PublicRoute": {
+      "DependsOn": [
+        "PublicRouteTable",
+        "InternetGateway"
+      ],
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+    "PublicRouteTable": {
+      "DependsOn": [
+        "VPC"
+      ],
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "public-RT"
+          }
+        ]
+      }
+    },
+    "PublicRouteTableAssocAZ1": {
+      "DependsOn": [
+        "PublicSubnetAZ1",
+        "PublicRouteTable"
+      ],
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PublicSubnetAZ1"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        }
+      }
+    },
+    "PublicRouteTableAssocAZ2": {
+      "DependsOn": [
+        "PublicSubnetAZ2",
+        "PublicRouteTable"
+      ],
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PublicSubnetAZ2"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        }
+      }
+    },
+    "PrivateRouteAZ1": {
+      "DependsOn": [
+        "PrivateRouteTableAZ1",
+        "NatInstanceAZ1"
+      ],
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PrivateRouteTableAZ1"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "InstanceId": {
+          "Ref": "NatInstanceAZ1"
+        }
+      }
+    },
+    "PrivateRouteAZ2": {
+      "DependsOn": [
+        "PrivateRouteTableAZ2",
+        "NatInstanceAZ2"
+      ],
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PrivateRouteTableAZ2"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "InstanceId": {
+          "Ref": "NatInstanceAZ2"
+        }
+      }
+    },
+    "PrivateRouteTableAZ1": {
+      "DependsOn": [
+        "VPC"
+      ],
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "private-RT-AZ1"
+          }
+        ]
+      }
+    },
+    "PrivateRouteTableAZ2": {
+      "DependsOn": [
+        "VPC"
+      ],
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "private-RT-AZ2"
+          }
+        ]
+      }
+    },
+    "PrivateRouteTableAssocAZ1": {
+      "DependsOn": [
+        "PrivateSubnetAZ1",
+        "PrivateRouteTableAZ1"
+      ],
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PrivateSubnetAZ1"
+        },
+        "RouteTableId": {
+          "Ref": "PrivateRouteTableAZ1"
+        }
+      }
+    },
+    "PrivateRouteTableAssocAZ2": {
+      "DependsOn": [
+        "PrivateSubnetAZ2",
+        "PrivateRouteTableAZ2"
+      ],
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PrivateSubnetAZ2"
+        },
+        "RouteTableId": {
+          "Ref": "PrivateRouteTableAZ2"
+        }
+      }
+    },
+    "NatEipAZ1": {
+      "DependsOn": [
+        "GatewayAttachment",
+        "NatInstanceAZ1"
+      ],
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc",
+        "InstanceId": {
+          "Ref": "NatInstanceAZ1"
+        }
+      }
+    },
+    "NatEipAZ2": {
+      "DependsOn": [
+        "GatewayAttachment",
+        "NatInstanceAZ2"
+      ],
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc",
+        "InstanceId": {
+          "Ref": "NatInstanceAZ2"
+        }
+      }
+    },
+    "NatInstanceAZ1": {
+      "DependsOn": [
+        "PublicSubnetAZ1",
+        "NatSecurityGroup"
+      ],
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": {
+          "Ref": "NatInstanceType"
+        },
+        "KeyName": {
+          "Ref": "InstancesKeyPair"
+        },
+        "SourceDestCheck": "false",
+        "ImageId": {
+          "Fn::FindInMap": [
+            "NATRegionAMI",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "NetworkInterfaces": [
+          {
+            "GroupSet": [
+              {
+                "Ref": "NatSecurityGroup"
+              }
+            ],
+            "AssociatePublicIpAddress": "true",
+            "DeviceIndex": "0",
+            "DeleteOnTermination": "true",
+            "SubnetId": {
+              "Ref": "PublicSubnetAZ1"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "NAT-AZ1"
+          }
+        ]
+      }
+    },
+    "NatInstanceAZ2": {
+      "DependsOn": [
+        "PublicSubnetAZ2",
+        "NatSecurityGroup"
+      ],
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": {
+          "Ref": "NatInstanceType"
+        },
+        "KeyName": {
+          "Ref": "InstancesKeyPair"
+        },
+        "SourceDestCheck": "false",
+        "ImageId": {
+          "Fn::FindInMap": [
+            "NATRegionAMI",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "NetworkInterfaces": [
+          {
+            "GroupSet": [
+              {
+                "Ref": "NatSecurityGroup"
+              }
+            ],
+            "AssociatePublicIpAddress": "true",
+            "DeviceIndex": "0",
+            "DeleteOnTermination": "true",
+            "SubnetId": {
+              "Ref": "PublicSubnetAZ2"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "NAT-AZ2"
+          }
+        ]
+      }
+    },
+    "NatSecurityGroup": {
+      "DependsOn": [
+        "VPC"
+      ],
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group for allowing access in/out of VPC",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIp": {
+              "Ref": "VpcCIDR"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "CidrIp": {
+              "Ref": "VpcCIDR"
+            }
+          },
+          {
+            "IpProtocol": "icmp",
+            "FromPort": 8,
+            "ToPort": -1,
+            "CidrIp": {
+              "Ref": "VpcCIDR"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": {
+              "Ref": "VpcCIDR"
+            }
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "FromPort": -1,
+            "ToPort": -1,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "nat-security-group"
+          }
+        ]
+      }
+    },
+    "BastionInstance": {
+      "DependsOn": [
+        "PublicSubnetAZ1",
+        "BastionSecurityGroup"
+      ],
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": {
+          "Ref": "BastionInstanceType"
+        },
+        "KeyName": {
+          "Ref": "InstancesKeyPair"
+        },
+        "SourceDestCheck": "false",
+        "ImageId": {
+          "Fn::FindInMap": [
+            "BastionRegionAMI",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "NetworkInterfaces": [
+          {
+            "GroupSet": [
+              {
+                "Ref": "BastionSecurityGroup"
+              }
+            ],
+            "AssociatePublicIpAddress": "true",
+            "DeviceIndex": "0",
+            "DeleteOnTermination": "true",
+            "SubnetId": {
+              "Ref": "PublicSubnetAZ1"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "bastion"
+          }
+        ]
+      }
+    },
+    "BastionSecurityGroup": {
+      "DependsOn": [
+        "VPC"
+      ],
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group for allowing access to EC2 instances of VPC",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "FromPort": -1,
+            "ToPort": -1,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "bastion-security-group"
+          }
+        ]
+      }
+    },
+    "LoadBalancerSecurityGroup": {
+      "DependsOn": [
+        "VPC"
+      ],
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group for allowing access to Load Balancer",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "FromPort": -1,
+            "ToPort": -1,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "load-balancer-security-group"
+          }
+        ]
+      }
+    },
+    "ECSALB": {
+      "DependsOn": [
+        "PublicSubnetAZ1",
+        "PublicSubnetAZ2",
+        "LoadBalancerSecurityGroup"
+      ],
+      "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+      "Properties": {
+        "Name": "ECSALB",
+        "Scheme": "internet-facing",
+        "Subnets": [
+          {
+            "Ref": "PublicSubnetAZ1"
+          },
+          {
+            "Ref": "PublicSubnetAZ2"
+          }
+        ],
+        "SecurityGroups": [
+          {
+            "Ref": "LoadBalancerSecurityGroup"
+          }
+        ]
+      }
+    },
+    "ALBListener": {
+      "Type": "AWS::ElasticLoadBalancingV2::Listener",
+      "DependsOn": [
+        "ECSALB",
+        "ECSTargetGroupFront"
+      ],
+      "Properties": {
+        "DefaultActions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": {
+              "Ref": "ECSTargetGroupFront"
+            }
+          }
+        ],
+        "LoadBalancerArn": {
+          "Ref": "ECSALB"
+        },
+        "Port": "80",
+        "Protocol": "HTTP"
+      }
+    },
+    "ECSALBListenerRule": {
+      "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+      "DependsOn": [
+        "ALBListener",
+        "ECSTargetGroupBack"
+      ],
+      "Properties": {
+        "Actions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": {
+              "Ref": "ECSTargetGroupBack"
+            }
+          }
+        ],
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "Values": [
+              "*api*",
+              "*static*"
+            ]
+          }
+        ],
+        "ListenerArn": {
+          "Ref": "ALBListener"
+        },
+        "Priority": 1
+      }
+    },
+    "ECSTargetGroupFront": {
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "DependsOn": "ECSALB",
+      "Properties": {
+        "HealthCheckIntervalSeconds": 10,
+        "HealthCheckPath": "/",
+        "HealthCheckProtocol": "HTTP",
+        "HealthCheckTimeoutSeconds": 5,
+        "HealthyThresholdCount": 2,
+        "Name": "ECS-target-group-front",
+        "Port": 4200,
+        "Protocol": "HTTP",
+        "UnhealthyThresholdCount": 2,
+        "VpcId": {
+          "Ref": "VPC"
+        }
+      }
+    },
+    "ECSTargetGroupBack": {
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "DependsOn": "ECSALB",
+      "Properties": {
+        "HealthCheckIntervalSeconds": 10,
+        "HealthCheckPath": "/api/",
+        "HealthCheckProtocol": "HTTP",
+        "HealthCheckTimeoutSeconds": 5,
+        "HealthyThresholdCount": 2,
+        "Name": "ECS-target-group-back",
+        "Port": 80,
+        "Protocol": "HTTP",
+        "UnhealthyThresholdCount": 2,
+        "VpcId": {
+          "Ref": "VPC"
+        }
+      }
+    },
+    "ECSCluster": {
+      "Type": "AWS::ECS::Cluster",
+      "Properties": {
+        "ClusterName": "tasks-board-cluster"
+      }
+    },
+    "ECSAutoScalingGroup": {
+      "DependsOn": [
+        "ContainerInstances",
+        "PrivateSubnetAZ2",
+        "PrivateSubnetAZ1"
+      ],
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "VPCZoneIdentifier": [
+          {
+            "Ref": "PrivateSubnetAZ1"
+          },
+          {
+            "Ref": "PrivateSubnetAZ2"
+          }
+        ],
+        "HealthCheckGracePeriod": 300,
+        "HealthCheckType": "ELB",
+        "TargetGroupARNs": [
+          {
+            "Ref": "ECSTargetGroupBack"
+          },
+          {
+            "Ref": "ECSTargetGroupFront"
+          }
+        ],
+        "LaunchConfigurationName": {
+          "Ref": "ContainerInstances"
+        },
+        "MinSize": 2,
+        "MaxSize": {
+          "Ref": "MaxSize"
+        },
+        "DesiredCapacity": {
+          "Ref": "DesiredCapacity"
+        }
+      },
+      "CreationPolicy": {
+        "ResourceSignal": {
+          "Timeout": "PT15M"
+        }
+      },
+      "UpdatePolicy": {
+        "AutoScalingReplacingUpdate": {
+          "WillReplace": "true"
+        }
+      }
+    },
+    "EcsSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "ECS Security Group",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "SourceSecurityGroupId": {
+              "Ref": "BastionSecurityGroup"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "SourceSecurityGroupId": {
+              "Ref": "LoadBalancerSecurityGroup"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 4200,
+            "SourceSecurityGroupId": {
+              "Ref": "LoadBalancerSecurityGroup"
+            }
+          },
+          {
+            "IpProtocol": "icmp",
+            "FromPort": 8,
+            "ToPort": -1,
+            "CidrIp": {
+              "Ref": "VpcCIDR"
+            }
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "FromPort": -1,
+            "ToPort": -1,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "ecs-security-group"
+          }
+        ]
+      }
+    },
+    "ContainerInstances": {
+      "DependsOn": [
+        "EcsSecurityGroup",
+        "ECSCluster",
+        "VPC"
+      ],
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "ImageId": {
+          "Fn::FindInMap": [
+            "ClusterInstanceRegionAMI",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "EcsSecurityGroup"
+          }
+        ],
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "IamInstanceProfile": "arn:aws:iam::318999426783:instance-profile/ecsInstanceRole",
+        "KeyName": {
+          "Ref": "InstancesKeyPair"
+        },
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash -xe\n",
+                "echo ECS_CLUSTER=",
+                {
+                  "Ref": "ECSCluster"
+                },
+                " >> /etc/ecs/ecs.config\n",
+                "yum install -y aws-cfn-bootstrap\n",
+                "/opt/aws/bin/cfn-signal -e $? ",
+                "         --stack ",
+                {
+                  "Ref": "AWS::StackName"
+                },
+                "         --resource ECSAutoScalingGroup ",
+                "         --region ",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "\n",
+                "yum update -y ecs-init\n"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "TaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "Family": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "-ecs-app"
+            ]
+          ]
+        },
+        "ContainerDefinitions": [
+          {
+            "Name": "front-app",
+            "Cpu": "512",
+            "Essential": "true",
+            "Image": "318999426783.dkr.ecr.us-east-2.amazonaws.com/front-end-task-boards:latest",
+            "Memory": "300",
+            "PortMappings": [
+              {
+                "HostPort": 4200,
+                "ContainerPort": 80
+              }
+            ]
+          },
+          {
+            "Name": "back-app",
+            "Cpu": "512",
+            "Essential": "true",
+            "Image": "318999426783.dkr.ecr.us-east-2.amazonaws.com/backend-task-boards:latest",
+            "Memory": "500",
+            "PortMappings": [
+              {
+                "HostPort": 80,
+                "ContainerPort": 80
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "service": {
+      "Type": "AWS::ECS::Service",
+      "DependsOn": [
+        "ALBListener",
+        "ECSAutoScalingGroup",
+        "TaskDefinition"
+      ],
+      "Properties": {
+        "Cluster": {
+          "Ref": "ECSCluster"
+        },
+        "DesiredCount": 2,
+        "LoadBalancers": [
+          {
+            "ContainerName": "front-app",
+            "ContainerPort": 80,
+            "TargetGroupArn": {
+              "Ref": "ECSTargetGroupFront"
+            }
+          },
+          {
+            "ContainerName": "back-app",
+            "ContainerPort": 80,
+            "TargetGroupArn": {
+              "Ref": "ECSTargetGroupBack"
+            }
+          }
+        ],
+        "TaskDefinition": {
+          "Ref": "TaskDefinition"
+        }
+      }
+    },
+    "DBSecurityGroup": {
+      "DependsOn": [
+        "VPC"
+      ],
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group for allowing access to DB",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 5432,
+            "ToPort": 5432,
+            "SourceSecurityGroupId": {
+              "Ref": "BastionSecurityGroup"
+            }
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "FromPort": -1,
+            "ToPort": -1,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "db-security-group"
+          }
+        ]
+      }
+    },
+    "MyDBSubnetGroup": {
+      "DependsOn": [
+        "VPC",
+        "PublicSubnetAZ1",
+        "PublicSubnetAZ2",
+        "PrivateSubnetAZ1",
+        "PrivateSubnetAZ2"
+      ],
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "Subnet group for tasks-board-db",
+        "SubnetIds": [
+          {
+            "Ref": "PublicSubnetAZ1"
+          },
+          {
+            "Ref": "PublicSubnetAZ2"
+          },
+          {
+            "Ref": "PrivateSubnetAZ1"
+          },
+          {
+            "Ref": "PrivateSubnetAZ2"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "DBSubnetGroup"
+          }
+        ]
+      }
+    },
+    "MyDB": {
+      "DependsOn": [
+        "MyDBSubnetGroup",
+        "DBSecurityGroup"
+      ],
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBInstanceIdentifier": {
+          "Ref": "DBInstanceID"
+        },
+        "DBName": {
+          "Ref": "DBName"
+        },
+        "DBInstanceClass": {
+          "Ref": "DBInstanceClass"
+        },
+        "AllocatedStorage": {
+          "Ref": "DBAllocatedStorage"
+        },
+        "Engine": "postgres",
+        "EngineVersion": "12.3",
+        "MasterUsername": {
+          "Ref": "DBUsername"
+        },
+        "MasterUserPassword": {
+          "Ref": "DBPassword"
+        },
+        "Port": 5432,
+        "MultiAZ": false,
+        "AvailabilityZone": {
+          "Ref": "AvZone1"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Ref": "DBSecurityGroup"
+          }
+        ],
+        "DBSubnetGroupName": {
+          "Ref": "MyDBSubnetGroup"
+        }
+      }
+    }
+  }
+}

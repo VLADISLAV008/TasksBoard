@@ -69,7 +69,7 @@ DATABASES = {
         'NAME': 'tasks_board',
         'USER': 'postgres',
         'PASSWORD': 'password',
-        'HOST': 'database-tasks-board.cu3byyojd0mu.us-east-2.rds.amazonaws.com',
+        'HOST': 'db-instance.cu3byyojd0mu.us-east-2.rds.amazonaws.com',
         'PORT': '5432',
     }
 }
