@@ -6,7 +6,7 @@ class BoardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Board
         fields = ['id', 'title', 'description', 'owner', 'users', 'token']
-        read_only_fields = ('owner', 'token')
+        read_only_fields = ('id', 'owner', 'token')
 
 
 class InviteActivateSerializer(serializers.Serializer):

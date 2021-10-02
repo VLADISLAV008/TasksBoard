@@ -6,4 +6,5 @@ if 'DJANGO_SETTINGS' in os.environ:
         from .settings_dev import *
 else:
     print("PROD SERVER")
-    from .settings_prod import *
+    # TODO change to .settings_dev import *
+    from .settings_dev import *

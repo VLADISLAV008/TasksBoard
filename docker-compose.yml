@@ -1,0 +1,26 @@
+version: '3.9'
+
+services:
+  backend-container:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uwsgi --ini /app/tasks_board/uwsgi.ini
+    volumes:
+      - static_volume:/app/static
+    expose:
+      - 8000
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    volumes:
+      - static_volume:/app/static
+    depends_on:
+      - backend-container
+    ports:
+      - "80:80"
+
+volumes:
+  static_volume:

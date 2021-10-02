@@ -30,7 +30,7 @@ class BoardViewSetTests(APITestCase):
         self.client.force_authenticate(user=user)
 
         url = reverse('board-list')
-        data = {'title': 'Title', 'description': 'Description', 'owner': user.pk}
+        data = {'title': 'Title', 'description': 'Description'}
         response = self.client.post(url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -41,10 +41,8 @@ class BoardViewSetTests(APITestCase):
         self.assertEqual(len(Board.objects.get().token), 12)
 
     def test_create_board_by_not_authenticated_user(self):
-        user = create_user('user', 'password', 'Elon', 'Musk')
-
         url = reverse('board-list')
-        data = {'title': 'Title', 'description': 'Description', 'owner': user.pk}
+        data = {'title': 'Title', 'description': 'Description'}
         response = self.client.post(url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -52,10 +50,9 @@ class BoardViewSetTests(APITestCase):
     def test_empty_list_boards_by_owner(self):
         user = create_user('user', 'password', 'Elon', 'Musk')
         user2 = create_user('user2', 'password', 'Elon', 'Musk')
-        self.client.force_authenticate(user=user)
-
         create_board('Board 1', 'Description', user2, [])
 
+        self.client.force_authenticate(user=user)
         url = reverse('board-list')
         response = self.client.get(url, format='json')
 
@@ -63,17 +60,18 @@ class BoardViewSetTests(APITestCase):
         self.assertEqual(len(response.data), 0)
 
     def test_list_boards_by_owner(self):
-        create_user('user', 'password', 'Elon', 'Musk')
-        user = User.objects.get(username='user')
+        user = create_user('user', 'password', 'Elon', 'Musk')
+        user2 = create_user('user2', 'password', 'Elon', 'Musk')
+
+        create_board('Board 1', 'Description', user2, [user])
+        create_board('Board 2', '', user, [])
+
         self.client.force_authenticate(user=user)
-
-        create_board('Board 1', '', user, [])
-
         url = reverse('board-list')
         response = self.client.get(url, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(len(response.data), 2)
 
 
 class SectionViewSetTests(APITestCase):
