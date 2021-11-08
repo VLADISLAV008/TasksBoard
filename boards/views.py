@@ -1,3 +1,5 @@
+from typing import Union
+
 from django.db.models import Q
 from rest_framework import viewsets, permissions, status
 from rest_framework.authtoken.models import Token
@@ -25,7 +27,7 @@ class UserViewSet(CreateModelMixin, RetrieveModelMixin,
 
 class BoardViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated,
-                          IsBoardOwner | IsBoardGuestReadOnly]
+                          Union[IsBoardOwner, IsBoardGuestReadOnly]]
 
     def get_serializer_class(self):
         if self.action == 'users':
@@ -46,6 +48,15 @@ class BoardViewSet(viewsets.ModelViewSet):
         board = self.get_object()
         serializer = self.get_serializer(board.users, many=True)
         return Response(serializer.data)
+
+    @action(detail=True)
+    def get_invite_link(self, request, pk=None):
+        board = self.get_object()
+        user = self.request.user
+        if board.owner == user:
+            return Response({'token': board.token})
+        else:
+            return Response({'detail': 'permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
     @action(detail=False, methods=['post'])
     def invite_link(self, request):

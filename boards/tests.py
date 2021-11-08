@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 
-from boards.models import User, Board, Section
+from boards.models import User, Board
 
 
 def create_user(username, password, first_name, last_name):
@@ -17,11 +17,6 @@ def create_board(title, description, owner, users):
     for user in users:
         board.users.add(user)
     return board
-
-
-def create_section(board, topic, description):
-    return Section.objects.create(board=board, topic=topic, description=description)
-
 
 class BoardViewSetTests(APITestCase):
     def test_create_board_by_authenticated_user(self):
@@ -47,7 +42,7 @@ class BoardViewSetTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_empty_list_boards_by_owner(self):
+    def test_absence_other_user_board_in_list_boards_by_owner(self):
         user = create_user('user', 'password', 'Elon', 'Musk')
         user2 = create_user('user2', 'password', 'Elon', 'Musk')
         create_board('Board 1', 'Description', user2, [])
@@ -73,46 +68,78 @@ class BoardViewSetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
+    def test_update_board_by_participant(self):
+        user = create_user('user', 'password', 'Elon', 'Musk')
+        user2 = create_user('user2', 'password', 'Elon', 'Musk')
 
-class SectionViewSetTests(APITestCase):
-    def test_list_sections_by_board_id_by_owner(self):
-        create_user('user', 'password', 'Elon', 'Musk')
-        user = User.objects.get(username='user')
+        board = create_board('Board 1', 'Description', user2, [user])
+
         self.client.force_authenticate(user=user)
+        url = reverse('board-update', kwargs={'pk': board.id})
+        data = {'title': 'New Title', 'description': 'New Description'}
+        response = self.client.post(url, data, format='json')
 
-        board_1 = create_board('Board 1', '', user, [])
-        create_section(board_1, 'Section 1', '')
-        create_section(board_1, 'Section 2', '')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        board_2 = create_board('Board 2', '', user, [])
-        create_section(board_2, 'Section 1', '')
+    def test_update_board_by_owner(self):
+        user = create_user('user', 'password', 'Elon', 'Musk')
+        board = create_board('Board 1', 'Description', user, [])
 
-        url = reverse('section-list')
-        response = self.client.get(url, {'board': board_1.pk}, format='json')
+        self.client.force_authenticate(user=user)
+        url = reverse('board-update', kwargs={'pk': board.id})
+        data = {'title': 'New Title', 'description': 'New Description'}
+        response = self.client.post(url, data, format='json')
 
+        updated_board = Board.objects.get(pk=board.id)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(Section.objects.count(), 3)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(updated_board.title, 'New Title')
+        self.assertEqual(updated_board.description, 'New Description')
 
-    def test_list_sections_by_owner(self):
-        user_1 = create_user('user', 'password', 'Elon', 'Musk')
-        user_2 = create_user('user2', 'password', 'Elon', 'Musk')
-        self.client.force_authenticate(user=user_1)
+    def test_get_participants_list_by_participant(self):
+        user = create_user('user', 'password', 'Elon', 'Musk')
+        user2 = create_user('user2', 'password', 'Elon', 'Musk')
 
-        board_1 = create_board('Board 1', '', user_1, [])
-        create_section(board_1, 'Section 1', '')
-        create_section(board_1, 'Section 2', '')
+        board = create_board('Board 1', 'Description', user2, [user])
 
-        board_2 = create_board('Board 2', '', user_1, [])
-        create_section(board_2, 'Section 1', '')
+        self.client.force_authenticate(user=user)
+        url = reverse('board-users', kwargs={'pk': board.id})
+        response = self.client.get(url, format='json')
 
-        board_3 = create_board('Board 3', '', user_2, [])
-        create_section(board_3, 'Section 1', '')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        url = reverse('section-list')
+    def test_get_participants_list_by_owner(self):
+        user = create_user('user', 'password', 'Elon', 'Musk')
+        user2 = create_user('user2', 'password', 'Elon', 'Musk')
+
+        board = create_board('Board 1', 'Description', user, [user2])
+
+        self.client.force_authenticate(user=user)
+        url = reverse('board-users', kwargs={'pk': board.id})
         response = self.client.get(url, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(Board.objects.count(), 3)
-        self.assertEqual(Section.objects.count(), 4)
-        self.assertEqual(len(response.data), 3)
+        self.assertEqual(len(response.data), 2)
+
+    def test_get_invite_link_list_by_owner(self):
+        user = create_user('user', 'password', 'Elon', 'Musk')
+
+        board = create_board('Board 1', 'Description', user, [])
+
+        self.client.force_authenticate(user=user)
+        url = reverse('board-get_invite_link', kwargs={'pk': board.id})
+        response = self.client.post(url, {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.context['token']), 12)
+
+    def test_get_invite_link_by_participant(self):
+        user = create_user('user', 'password', 'Elon', 'Musk')
+        user2 = create_user('user2', 'password', 'Elon', 'Musk')
+
+        board = create_board('Board 1', 'Description', user2, [user])
+
+        self.client.force_authenticate(user=user)
+        url = reverse('board-get_invite_link', kwargs={'pk': board.id})
+        response = self.client.post(url, {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
