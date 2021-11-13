@@ -12,8 +12,7 @@ def create_user(username, password, first_name, last_name):
 
 def create_board(title, description, owner, users):
     time = timezone.now()
-    token = Board.generate_token(12)
-    board = Board.objects.create(title=title, description=description, owner=owner, created=time, token=token)
+    board = Board.objects.create(title=title, description=description, owner=owner, created=time)
     for user in users:
         board.users.add(user)
     return board
@@ -75,9 +74,9 @@ class BoardViewSetTests(APITestCase):
         board = create_board('Board 1', 'Description', user2, [user])
 
         self.client.force_authenticate(user=user)
-        url = reverse('board-update', kwargs={'pk': board.id})
+        url = reverse('board-detail', kwargs={'pk': board.id})
         data = {'title': 'New Title', 'description': 'New Description'}
-        response = self.client.post(url, data, format='json')
+        response = self.client.put(url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -86,9 +85,9 @@ class BoardViewSetTests(APITestCase):
         board = create_board('Board 1', 'Description', user, [])
 
         self.client.force_authenticate(user=user)
-        url = reverse('board-update', kwargs={'pk': board.id})
+        url = reverse('board-detail', kwargs={'pk': board.id})
         data = {'title': 'New Title', 'description': 'New Description'}
-        response = self.client.post(url, data, format='json')
+        response = self.client.put(url, data, format='json')
 
         updated_board = Board.objects.get(pk=board.id)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -105,7 +104,8 @@ class BoardViewSetTests(APITestCase):
         url = reverse('board-users', kwargs={'pk': board.id})
         response = self.client.get(url, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
 
     def test_get_participants_list_by_owner(self):
         user = create_user('user', 'password', 'Elon', 'Musk')
@@ -118,7 +118,7 @@ class BoardViewSetTests(APITestCase):
         response = self.client.get(url, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data), 1)
 
     def test_get_invite_link_list_by_owner(self):
         user = create_user('user', 'password', 'Elon', 'Musk')
@@ -126,11 +126,11 @@ class BoardViewSetTests(APITestCase):
         board = create_board('Board 1', 'Description', user, [])
 
         self.client.force_authenticate(user=user)
-        url = reverse('board-get_invite_link', kwargs={'pk': board.id})
-        response = self.client.post(url, {}, format='json')
+        url = reverse('board-get-invite-link', kwargs={'pk': board.id})
+        response = self.client.get(url, {}, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.context['token']), 12)
+        self.assertEqual(len(response.data['token']), 12)
 
     def test_get_invite_link_by_participant(self):
         user = create_user('user', 'password', 'Elon', 'Musk')
@@ -139,7 +139,7 @@ class BoardViewSetTests(APITestCase):
         board = create_board('Board 1', 'Description', user2, [user])
 
         self.client.force_authenticate(user=user)
-        url = reverse('board-get_invite_link', kwargs={'pk': board.id})
-        response = self.client.post(url, {}, format='json')
+        url = reverse('board-get-invite-link', kwargs={'pk': board.id})
+        response = self.client.get(url, {}, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

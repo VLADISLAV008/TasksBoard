@@ -26,8 +26,7 @@ class UserViewSet(CreateModelMixin, RetrieveModelMixin,
 
 
 class BoardViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated,
-                          Union[IsBoardOwner, IsBoardGuestReadOnly]]
+    permission_classes = [permissions.IsAuthenticated, IsBoardOwner | IsBoardGuestReadOnly]
 
     def get_serializer_class(self):
         if self.action == 'users':
