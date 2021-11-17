@@ -32,7 +32,7 @@ class BoardViewSetTests(APITestCase):
         self.assertEqual(Board.objects.get().title, 'Title')
         self.assertEqual(Board.objects.get().description, 'Description')
         self.assertEqual(Board.objects.get().owner.pk, user.pk)
-        self.assertEqual(len(Board.objects.get().token), 13)
+        self.assertEqual(len(Board.objects.get().token), 12)
 
     def test_create_board_by_not_authenticated_user(self):
         url = reverse('board-list')
